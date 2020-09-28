@@ -93,7 +93,8 @@ class _AdbStreamConnection(object):
         try:
             self.__conn = self._create_socket()
         except ConnectionRefusedError:
-            subprocess.run([adb_path(), "start-server"], timeout=20.0)  # 20s should enough for adb start
+            # 20s should enough for adb start
+            subprocess.run([adb_path(), "start-server"], timeout=20.0)
             self.__conn = self._create_socket()
         return self
 
@@ -247,7 +248,8 @@ class AdbClient(object):
             try:
                 return c.read_until_close()
             except socket.timeout:
-                raise AdbTimeout("shell exec timeout", "CMD={!r} TIMEOUT={:.1f}".format(command, timeout))
+                raise AdbTimeout(
+                    "shell exec timeout", "CMD={!r} TIMEOUT={:.1f}".format(command, timeout))
         except:
             if stream:
                 c.close()
@@ -482,7 +484,8 @@ class AdbDevice(ShellMixin):
         """
         if isinstance(cmdargs, (list, tuple)):
             cmdargs = subprocess.list2cmdline(cmdargs)
-        ret = self._client.shell(self._serial, cmdargs, stream=stream, timeout=timeout)
+        ret = self._client.shell(
+            self._serial, cmdargs, stream=stream, timeout=timeout)
         if stream:
             return ret
         return ret.rstrip() if rstrip else ret
@@ -501,11 +504,23 @@ class AdbDevice(ShellMixin):
         """ forward remote port to local random port """
         if isinstance(remote, int):
             remote = "tcp:" + str(remote)
+
         for f in self.forward_list():
             if f.serial == self._serial and f.remote == remote and f.local.startswith(
                     "tcp:"):
                 return int(f.local[len("tcp:"):])
-        local_port = get_free_port()
+
+        local_port = 10220
+        is_used = True
+        while is_used == True:
+            is_used = False
+            for item in self._client.forward_list():
+                if(item.local == "tcp:%d" % local_port):
+                    local_port += 1
+                    is_used = True
+                    break
+
+        # local_port = get_free_port()
         self._client.forward(self._serial, "tcp:" + str(local_port), remote)
         return local_port
 
@@ -637,7 +652,8 @@ class Property():
     def get(self, name: str, cache=True) -> str:
         if cache and name in self._d._properties:
             return self._d._properties[name]
-        value = self._d._properties[name] = self._d.shell(['getprop', name]).strip()
+        value = self._d._properties[name] = self._d.shell(
+            ['getprop', name]).strip()
         return value
 
     @property
